@@ -1,0 +1,8 @@
+
+.env file structure:
+```
+SPOTIFY_CLIENT_ID=xxx
+SPOTIFY_CLIENT_SECRET=xxx
+SPOTIFY_REDIRECT_URI=xxx
+OUTPUT_DIR=xxx
+```
