@@ -1,9 +1,9 @@
 import os
 from pathlib import Path
 
-import app_logger as log
-from csv_export import write_csv
-from spotify_auth import get_spotify_access_token, spotify_get
+from libs import app_logger as log
+from libs.csv_export import write_csv
+from libs.spotify_auth import get_spotify_access_token, spotify_get
 
 
 ENV_FILE = ".env"

@@ -5,7 +5,7 @@ import urllib.request
 import webbrowser
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-import app_logger as log
+from libs import app_logger as log
 
 
 class CallbackHandler(BaseHTTPRequestHandler):
