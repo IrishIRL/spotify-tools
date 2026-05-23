@@ -64,20 +64,20 @@ def get_config():
 
 def track_to_row(item):
     track = item["track"]
-    album = track["album"]
+    album = track.get("album") or {}
 
     return {
-        "added_at": item["added_at"],
-        "track_name": track["name"],
-        "artists": ", ".join(artist["name"] for artist in track["artists"]),
-        "album": album["name"],
-        "release_date": album["release_date"],
-        "duration_ms": track["duration_ms"],
-        "popularity": track["popularity"],
-        "explicit": track["explicit"],
-        "spotify_url": track["external_urls"]["spotify"],
+        "added_at": item.get("added_at", ""),
+        "track_name": track.get("name", ""),
+        "artists": ", ".join(artist["name"] for artist in track.get("artists", [])),
+        "album": album.get("name", ""),
+        "release_date": album.get("release_date", ""),
+        "duration_ms": track.get("duration_ms", ""),
+        "popularity": track.get("popularity", ""),
+        "explicit": track.get("explicit", ""),
+        "spotify_url": track.get("external_urls", {}).get("spotify", ""),
         "isrc": track.get("external_ids", {}).get("isrc", ""),
-        "track_id": track["id"],
+        "track_id": track.get("id", ""),
     }
 
 

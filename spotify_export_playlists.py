@@ -11,13 +11,13 @@ ENV_FILE = ".env"
 SCOPE = "playlist-read-private playlist-read-collaborative"
 
 FIELDNAMES = [
-    "playlist_name",
-    "playlist_id",
     "added_at",
-    "added_by",
     "track_name",
     "artists",
     "album",
+    "playlist_name",
+    "playlist_id",
+    "added_by",
     "release_date",
     "duration_ms",
     "popularity",
@@ -112,13 +112,13 @@ def track_to_row(playlist, item):
     added_by = item.get("added_by") or {}
 
     return {
-        "playlist_name": playlist["name"],
-        "playlist_id": playlist["id"],
         "added_at": item.get("added_at", ""),
-        "added_by": added_by.get("id", ""),
         "track_name": track.get("name", ""),
         "artists": ", ".join(artist["name"] for artist in track.get("artists", [])),
         "album": album.get("name", ""),
+        "playlist_name": playlist["name"],
+        "playlist_id": playlist["id"],
+        "added_by": added_by.get("id", ""),
         "release_date": album.get("release_date", ""),
         "duration_ms": track.get("duration_ms", ""),
         "popularity": track.get("popularity", ""),
