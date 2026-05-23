@@ -1,14 +1,27 @@
-import csv
 import os
-from pathlib import Path
 
 import app_logger as log
+from csv_export import write_csv
 from spotify_auth import get_spotify_access_token, spotify_get
 
 
 ENV_FILE = ".env"
 OUTPUT_FILE_NAME = "liked_songs.csv"
 SCOPE = "user-library-read"
+
+FIELDNAMES = [
+    "added_at",
+    "track_name",
+    "artists",
+    "album",
+    "release_date",
+    "duration_ms",
+    "popularity",
+    "explicit",
+    "spotify_url",
+    "isrc",
+    "track_id",
+]
 
 
 def load_env(path=ENV_FILE):
@@ -89,32 +102,6 @@ def get_liked_songs(access_token):
     return rows
 
 
-def write_csv(rows, output_dir):
-    output_path = Path(output_dir) / OUTPUT_FILE_NAME
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    fieldnames = [
-        "added_at",
-        "track_name",
-        "artists",
-        "album",
-        "release_date",
-        "duration_ms",
-        "popularity",
-        "explicit",
-        "spotify_url",
-        "isrc",
-        "track_id",
-    ]
-
-    with open(output_path, "w", newline="", encoding="utf-8") as file:
-        writer = csv.DictWriter(file, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(rows)
-
-    return output_path
-
-
 def main():
     config = get_config()
 
@@ -126,7 +113,13 @@ def main():
     )
 
     rows = get_liked_songs(access_token)
-    output_path = write_csv(rows, config["output_dir"])
+
+    output_path = write_csv(
+        rows=rows,
+        output_dir=config["output_dir"],
+        file_name=OUTPUT_FILE_NAME,
+        fieldnames=FIELDNAMES,
+    )
 
     log.info(f"Exported {len(rows)} songs to {output_path}.")
 
