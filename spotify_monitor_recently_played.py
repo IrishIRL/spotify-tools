@@ -11,7 +11,7 @@ ENV_FILE = ".env"
 SCOPE = "user-read-recently-played"
 
 DB_FILE_NAME = "listening_history.db"
-POLL_INTERVAL_SECONDS = 300
+POLL_INTERVAL_SECONDS = 1800
 
 
 def load_env(path=ENV_FILE):
