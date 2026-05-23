@@ -1,8 +1,8 @@
 import os
 
 from libs import app_logger as log
-from libs.csv_export import write_csv
-from libs.spotify_auth import get_spotify_access_token, spotify_get
+from libs import csv_export
+from libs.spotify_auth import SpotifyClient
 
 
 ENV_FILE = ".env"
@@ -81,7 +81,7 @@ def track_to_row(item):
     }
 
 
-def get_liked_songs(access_token):
+def get_liked_songs(spotify):
     rows = []
     url = "https://api.spotify.com/v1/me/tracks?limit=50"
     page = 1
@@ -89,7 +89,7 @@ def get_liked_songs(access_token):
     while url:
         log.info(f"Fetching page {page}...")
 
-        data = spotify_get(url, access_token)
+        data = spotify.get(url)
 
         for item in data["items"]:
             rows.append(track_to_row(item))
@@ -105,16 +105,16 @@ def get_liked_songs(access_token):
 def main():
     config = get_config()
 
-    access_token = get_spotify_access_token(
+    spotify = SpotifyClient(
         config["client_id"],
         config["client_secret"],
         config["redirect_uri"],
         SCOPE,
     )
 
-    rows = get_liked_songs(access_token)
+    rows = get_liked_songs(spotify)
 
-    output_path = write_csv(
+    output_path = csv_export.write_csv(
         rows=rows,
         output_dir=config["output_dir"],
         file_name=OUTPUT_FILE_NAME,

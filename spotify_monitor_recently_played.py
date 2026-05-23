@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 from libs import app_logger as log
-from libs.spotify_auth import get_spotify_token_data, spotify_get_with_refresh
+from libs.spotify_auth import SpotifyClient
 
 
 ENV_FILE = ".env"
@@ -96,15 +96,9 @@ def recently_played_item_to_row(item):
     )
 
 
-def get_recently_played_rows(token_data, client_id, client_secret):
+def get_recently_played_rows(spotify):
     url = "https://api.spotify.com/v1/me/player/recently-played?limit=50"
-
-    data, token_data = spotify_get_with_refresh(
-        url,
-        token_data,
-        client_id,
-        client_secret,
-    )
+    data = spotify.get(url)
 
     rows = []
 
@@ -119,7 +113,7 @@ def get_recently_played_rows(token_data, client_id, client_secret):
 
     rows.sort(key=lambda row: row[0])
 
-    return rows, token_data
+    return rows
 
 
 def insert_rows(connection, rows):
@@ -147,7 +141,7 @@ def insert_rows(connection, rows):
     return cursor.rowcount
 
 
-def monitor_recently_played(token_data, client_id, client_secret, database_path):
+def monitor_recently_played(spotify, database_path):
     database_path.parent.mkdir(parents=True, exist_ok=True)
 
     with sqlite3.connect(database_path) as connection:
@@ -157,12 +151,7 @@ def monitor_recently_played(token_data, client_id, client_secret, database_path)
         log.info(f"Polling every {POLL_INTERVAL_SECONDS} seconds.")
 
         while True:
-            rows, token_data = get_recently_played_rows(
-                token_data,
-                client_id,
-                client_secret,
-            )
-
+            rows = get_recently_played_rows(spotify)
             inserted_count = insert_rows(connection, rows)
 
             log.info(f"Fetched {len(rows)} recently played tracks. Added {inserted_count} new rows.")
@@ -173,7 +162,7 @@ def monitor_recently_played(token_data, client_id, client_secret, database_path)
 def main():
     config = get_config()
 
-    token_data = get_spotify_token_data(
+    spotify = SpotifyClient(
         config["client_id"],
         config["client_secret"],
         config["redirect_uri"],
@@ -182,12 +171,7 @@ def main():
 
     database_path = get_database_path(config["output_dir"])
 
-    monitor_recently_played(
-        token_data,
-        config["client_id"],
-        config["client_secret"],
-        database_path,
-    )
+    monitor_recently_played(spotify, database_path)
 
 
 if __name__ == "__main__":

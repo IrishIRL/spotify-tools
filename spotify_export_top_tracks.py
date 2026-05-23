@@ -1,8 +1,8 @@
 import os
 
 from libs import app_logger as log
-from libs.csv_export import write_csv
-from libs.spotify_auth import get_spotify_access_token, spotify_get
+from libs import csv_export
+from libs.spotify_auth import SpotifyClient
 
 
 ENV_FILE = ".env"
@@ -81,13 +81,13 @@ def track_to_row(track, rank, time_range):
     }
 
 
-def get_top_tracks(access_token, time_range):
+def get_top_tracks(spotify, time_range):
     rows = []
     url = f"https://api.spotify.com/v1/me/top/tracks?limit=50&time_range={time_range}"
 
     log.info(f"Fetching top tracks for {time_range}...")
 
-    data = spotify_get(url, access_token)
+    data = spotify.get(url)
 
     for index, track in enumerate(data["items"], start=1):
         rows.append(track_to_row(track, index, time_range))
@@ -98,7 +98,7 @@ def get_top_tracks(access_token, time_range):
 def main():
     config = get_config()
 
-    access_token = get_spotify_access_token(
+    spotify = SpotifyClient(
         config["client_id"],
         config["client_secret"],
         config["redirect_uri"],
@@ -108,9 +108,9 @@ def main():
     output_dir = config["output_dir"]
 
     for time_range in ["short_term", "medium_term", "long_term"]:
-        rows = get_top_tracks(access_token, time_range)
+        rows = get_top_tracks(spotify, time_range)
 
-        output_path = write_csv(
+        output_path = csv_export.write_csv(
             rows=rows,
             output_dir=output_dir,
             file_name=f"top_tracks_{time_range}.csv",

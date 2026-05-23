@@ -140,17 +140,6 @@ def get_spotify_token_data(client_id, client_secret, redirect_uri, scope):
     )
 
 
-def get_spotify_access_token(client_id, client_secret, redirect_uri, scope):
-    token_data = get_spotify_token_data(
-        client_id,
-        client_secret,
-        redirect_uri,
-        scope,
-    )
-
-    return token_data["access_token"]
-
-
 def spotify_get(url, access_token):
     request = urllib.request.Request(
         url,
@@ -161,19 +150,36 @@ def spotify_get(url, access_token):
         return json.loads(response.read())
 
 
-def spotify_get_with_refresh(url, token_data, client_id, client_secret):
-    try:
-        return spotify_get(url, token_data["access_token"]), token_data
-    except urllib.error.HTTPError as error:
-        if error.code != 401:
-            raise
+class SpotifyClient:
+    def __init__(self, client_id, client_secret, redirect_uri, scope):
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.redirect_uri = redirect_uri
+        self.scope = scope
 
-        log.warn("Spotify access token expired. Refreshing token...")
-
-        token_data = refresh_token_data(
+        self.token_data = get_spotify_token_data(
             client_id,
             client_secret,
-            token_data["refresh_token"],
+            redirect_uri,
+            scope,
         )
 
-        return spotify_get(url, token_data["access_token"]), token_data
+    def refresh_access_token(self):
+        log.warn("Spotify access token expired. Refreshing token...")
+
+        self.token_data = refresh_token_data(
+            self.client_id,
+            self.client_secret,
+            self.token_data["refresh_token"],
+        )
+
+    def get(self, url):
+        try:
+            return spotify_get(url, self.token_data["access_token"])
+        except urllib.error.HTTPError as error:
+            if error.code != 401:
+                raise
+
+            self.refresh_access_token()
+
+            return spotify_get(url, self.token_data["access_token"])

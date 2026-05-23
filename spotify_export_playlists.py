@@ -3,8 +3,8 @@ import re
 from pathlib import Path
 
 from libs import app_logger as log
-from libs.csv_export import write_csv
-from libs.spotify_auth import get_spotify_access_token, spotify_get
+from libs import csv_export
+from libs.spotify_auth import SpotifyClient
 
 
 ENV_FILE = ".env"
@@ -80,7 +80,7 @@ def get_playlists_output_dir(output_dir):
     return Path(output_dir) / "playlists"
 
 
-def get_current_user_playlists(access_token):
+def get_current_user_playlists(spotify):
     playlists = []
     url = "https://api.spotify.com/v1/me/playlists?limit=50"
     page = 1
@@ -88,7 +88,7 @@ def get_current_user_playlists(access_token):
     while url:
         log.info(f"Fetching playlists page {page}...")
 
-        data = spotify_get(url, access_token)
+        data = spotify.get(url)
         playlists.extend(data["items"])
 
         log.info(f"Fetched {len(playlists)} playlists so far.")
@@ -129,7 +129,7 @@ def track_to_row(playlist, item):
     }
 
 
-def get_playlist_tracks(access_token, playlist):
+def get_playlist_tracks(spotify, playlist):
     rows = []
     url = f"https://api.spotify.com/v1/playlists/{playlist['id']}/tracks?limit=100"
     page = 1
@@ -137,7 +137,7 @@ def get_playlist_tracks(access_token, playlist):
     while url:
         log.info(f"Fetching '{playlist['name']}' page {page}...")
 
-        data = spotify_get(url, access_token)
+        data = spotify.get(url)
 
         for item in data["items"]:
             row = track_to_row(playlist, item)
@@ -156,7 +156,7 @@ def get_playlist_tracks(access_token, playlist):
 def main():
     config = get_config()
 
-    access_token = get_spotify_access_token(
+    spotify = SpotifyClient(
         config["client_id"],
         config["client_secret"],
         config["redirect_uri"],
@@ -164,13 +164,13 @@ def main():
     )
 
     playlists_output_dir = get_playlists_output_dir(config["output_dir"])
-    playlists = get_current_user_playlists(access_token)
+    playlists = get_current_user_playlists(spotify)
 
     for playlist in playlists:
-        rows = get_playlist_tracks(access_token, playlist)
+        rows = get_playlist_tracks(spotify, playlist)
         file_name = safe_file_name(playlist["name"])
 
-        output_path = write_csv(
+        output_path = csv_export.write_csv(
             rows=rows,
             output_dir=playlists_output_dir,
             file_name=file_name,
