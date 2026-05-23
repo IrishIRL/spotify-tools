@@ -10,7 +10,7 @@ Create `.env` in the project root:
 SPOTIFY_CLIENT_ID=your_client_id
 SPOTIFY_CLIENT_SECRET=your_client_secret
 SPOTIFY_REDIRECT_URI=http://127.0.0.1:8888/callback
-OUTPUT_DIR=C:\Users\nub\Downloads
+OUTPUT_DIR=C:\Users\xxx\Downloads
 ```
 
 Register the same redirect URI in Spotify Developer Dashboard.
