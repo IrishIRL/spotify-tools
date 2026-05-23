@@ -1,5 +1,6 @@
 import base64
 import json
+import urllib.error
 import urllib.parse
 import urllib.request
 import webbrowser
@@ -79,38 +80,75 @@ def get_authorization_code(client_id, redirect_uri, scope):
     return CallbackHandler.auth_code
 
 
-def get_access_token(client_id, client_secret, redirect_uri, auth_code):
+def get_basic_auth_header(client_id, client_secret):
     credentials = f"{client_id}:{client_secret}".encode()
     basic_auth = base64.b64encode(credentials).decode()
 
+    return f"Basic {basic_auth}"
+
+
+def request_token(client_id, client_secret, form_data):
     request = urllib.request.Request(
         "https://accounts.spotify.com/api/token",
-        data=urllib.parse.urlencode({
-            "grant_type": "authorization_code",
-            "code": auth_code,
-            "redirect_uri": redirect_uri,
-        }).encode(),
+        data=urllib.parse.urlencode(form_data).encode(),
         headers={
-            "Authorization": f"Basic {basic_auth}",
+            "Authorization": get_basic_auth_header(client_id, client_secret),
             "Content-Type": "application/x-www-form-urlencoded",
         },
     )
 
     with urllib.request.urlopen(request, timeout=30) as response:
-        token_data = json.loads(response.read())
-
-    return token_data["access_token"]
+        return json.loads(response.read())
 
 
-def get_spotify_access_token(client_id, client_secret, redirect_uri, scope):
+def get_token_data(client_id, client_secret, redirect_uri, auth_code):
+    return request_token(
+        client_id,
+        client_secret,
+        {
+            "grant_type": "authorization_code",
+            "code": auth_code,
+            "redirect_uri": redirect_uri,
+        },
+    )
+
+
+def refresh_token_data(client_id, client_secret, refresh_token):
+    token_data = request_token(
+        client_id,
+        client_secret,
+        {
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+        },
+    )
+
+    if "refresh_token" not in token_data:
+        token_data["refresh_token"] = refresh_token
+
+    return token_data
+
+
+def get_spotify_token_data(client_id, client_secret, redirect_uri, scope):
     auth_code = get_authorization_code(client_id, redirect_uri, scope)
 
-    return get_access_token(
+    return get_token_data(
         client_id,
         client_secret,
         redirect_uri,
         auth_code,
     )
+
+
+def get_spotify_access_token(client_id, client_secret, redirect_uri, scope):
+    token_data = get_spotify_token_data(
+        client_id,
+        client_secret,
+        redirect_uri,
+        scope,
+    )
+
+    return token_data["access_token"]
 
 
 def spotify_get(url, access_token):
@@ -121,3 +159,21 @@ def spotify_get(url, access_token):
 
     with urllib.request.urlopen(request, timeout=30) as response:
         return json.loads(response.read())
+
+
+def spotify_get_with_refresh(url, token_data, client_id, client_secret):
+    try:
+        return spotify_get(url, token_data["access_token"]), token_data
+    except urllib.error.HTTPError as error:
+        if error.code != 401:
+            raise
+
+        log.warn("Spotify access token expired. Refreshing token...")
+
+        token_data = refresh_token_data(
+            client_id,
+            client_secret,
+            token_data["refresh_token"],
+        )
+
+        return spotify_get(url, token_data["access_token"]), token_data
