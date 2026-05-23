@@ -1,5 +1,6 @@
 import os
 import re
+from pathlib import Path
 
 import app_logger as log
 from csv_export import write_csv
@@ -70,9 +71,13 @@ def safe_file_name(name):
     name = name.strip().strip(".")
 
     if not name:
-        return "playlist"
+        return "playlist.csv"
 
     return f"{name}.csv"
+
+
+def get_playlists_output_dir(output_dir):
+    return Path(output_dir) / "playlists"
 
 
 def get_current_user_playlists(access_token):
@@ -103,7 +108,7 @@ def track_to_row(playlist, item):
     if track.get("type") != "track":
         return None
 
-    album = track["album"]
+    album = track.get("album") or {}
     added_by = item.get("added_by") or {}
 
     return {
@@ -158,6 +163,7 @@ def main():
         SCOPE,
     )
 
+    playlists_output_dir = get_playlists_output_dir(config["output_dir"])
     playlists = get_current_user_playlists(access_token)
 
     for playlist in playlists:
@@ -166,7 +172,7 @@ def main():
 
         output_path = write_csv(
             rows=rows,
-            output_dir=config["output_dir"],
+            output_dir=playlists_output_dir,
             file_name=file_name,
             fieldnames=FIELDNAMES,
         )
