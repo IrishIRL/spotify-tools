@@ -140,16 +140,6 @@ def get_spotify_token_data(client_id, client_secret, redirect_uri, scope):
     )
 
 
-def spotify_get(url, access_token):
-    request = urllib.request.Request(
-        url,
-        headers={"Authorization": f"Bearer {access_token}"}
-    )
-
-    with urllib.request.urlopen(request, timeout=30) as response:
-        return json.loads(response.read())
-
-
 class SpotifyClient:
     def __init__(self, client_id, client_secret, redirect_uri, scope):
         self.client_id = client_id
@@ -173,13 +163,50 @@ class SpotifyClient:
             self.token_data["refresh_token"],
         )
 
-    def get(self, url):
+    def request(self, method, url, body=None):
+        data = None
+        headers = {
+            "Authorization": f"Bearer {self.token_data['access_token']}",
+        }
+
+        if body is not None:
+            data = json.dumps(body).encode()
+            headers["Content-Type"] = "application/json"
+
+        request = urllib.request.Request(
+            url,
+            data=data,
+            headers=headers,
+            method=method,
+        )
+
         try:
-            return spotify_get(url, self.token_data["access_token"])
+            with urllib.request.urlopen(request, timeout=30) as response:
+                response_body = response.read()
+
+                if not response_body:
+                    return None
+
+                content_type = response.headers.get("Content-Type", "")
+
+                if "application/json" not in content_type:
+                    return response_body.decode("utf-8", errors="replace")
+
+                return json.loads(response_body)
+
         except urllib.error.HTTPError as error:
             if error.code != 401:
                 raise
 
             self.refresh_access_token()
 
-            return spotify_get(url, self.token_data["access_token"])
+            return self.request(method, url, body)
+
+    def get(self, url):
+        return self.request("GET", url)
+
+    def put(self, url, body=None):
+        return self.request("PUT", url, body)
+
+    def post(self, url, body=None):
+        return self.request("POST", url, body)
